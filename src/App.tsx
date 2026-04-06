@@ -47,7 +47,7 @@ const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (v: boolea
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
-  // Removed !user check to allow guest access
+  if (!user) return null;
 
   return (
     <>
@@ -133,7 +133,7 @@ const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (v: boolea
 const Header = ({ setIsOpen }: { setIsOpen: (v: boolean) => void }) => {
   const { user, profile } = useAuth();
   
-  // Removed !user check to allow guest access
+  if (!user) return null;
 
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-20 h-20 bg-slate-950/40 backdrop-blur-xl border-b border-white/5 z-30 flex items-center justify-between px-8">
@@ -174,7 +174,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(147,51,234,0.5)]" />
     </div>
   );
-  // Temporarily allow access even if not logged in
+  if (!user) return <Navigate to="/login" />;
   return <>{children}</>;
 };
 
