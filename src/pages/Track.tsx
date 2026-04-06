@@ -27,6 +27,9 @@ const MapAutoCenter = ({ center }: { center: [number, number] }) => {
   return null;
 };
 
+const INITIAL_CENTER: [number, number] = [12.9716, 77.5946];
+const INITIAL_ZOOM = 15;
+
 export default function TrackPage() {
   const { trackingId } = useParams<{ trackingId: string }>();
   const [trackingData, setTrackingData] = useState<any>(null);
@@ -136,8 +139,8 @@ export default function TrackPage() {
       {/* Map Content */}
       <div className="flex-1 relative z-10">
         <MapContainer 
-          center={center} 
-          zoom={15} 
+          center={INITIAL_CENTER} 
+          zoom={INITIAL_ZOOM} 
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
         >
