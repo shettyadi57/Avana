@@ -1,0 +1,150 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and safety settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "emergencyContacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "phone": { "type": "string" },
+              "relation": { "type": "string" }
+            }
+          }
+        },
+        "language": { "type": "string", "enum": ["en", "hi"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName"]
+    },
+    "Incident": {
+      "title": "Incident",
+      "description": "Community safety incident report",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["kidnapping", "harassment", "suspicious", "safe"] },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" },
+            "address": { "type": "string" }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "anonymous": { "type": "boolean" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "likes": { "type": "integer" },
+        "comments": { "type": "integer" }
+      },
+      "required": ["title", "description", "type", "location", "timestamp", "anonymous"]
+    },
+    "PoliceReport": {
+      "title": "PoliceReport",
+      "description": "Silent police complaint",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" },
+            "address": { "type": "string" }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["received", "dispatched", "resolved"] },
+        "isAnonymous": { "type": "boolean" }
+      },
+      "required": ["type", "location", "timestamp", "status", "isAnonymous"]
+    },
+    "SOSAlert": {
+      "title": "SOSAlert",
+      "description": "Emergency SOS alert",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" },
+            "address": { "type": "string" }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "resolved"] },
+        "contactsNotified": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["userName", "location", "timestamp", "status"]
+    },
+    "LiveTracking": {
+      "title": "LiveTracking",
+      "description": "Real-time journey tracking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "currentLocation": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "path": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "lat": { "type": "number" },
+              "lng": { "type": "number" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "status": { "type": "string", "enum": ["active", "ended"] },
+        "batteryLevel": { "type": "number" },
+        "networkStatus": { "type": "string" }
+      },
+      "required": ["userName", "currentLocation", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile documents"
+    },
+    "/incidents/{incidentId}": {
+      "schema": { "$ref": "#/entities/Incident" },
+      "description": "Community incident reports"
+    },
+    "/police_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/PoliceReport" },
+      "description": "Silent police complaints"
+    },
+    "/sos_alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/SOSAlert" },
+      "description": "Emergency SOS alerts"
+    },
+    "/live_tracking/{trackingId}": {
+      "schema": { "$ref": "#/entities/LiveTracking" },
+      "description": "Real-time journey tracking sessions"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Avana",
+  "description": "Avana - AI Legal & Safety System for Women",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+}

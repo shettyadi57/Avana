@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, format: email)
+    //   - displayName: string (required)
+    //   - emergencyContacts: list of maps (optional)
+    //   - language: string (optional, enum: ['en', 'hi'])
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: incidents
+    // Document ID: {incidentId}
+    // Fields:
+    //   - title: string (required, max 100 chars)
+    //   - description: string (required, max 1000 chars)
+    //   - type: string (required, enum: ['kidnapping', 'harassment', 'suspicious', 'safe'])
+    //   - location: map {lat: number, lng: number, address: string} (required)
+    //   - timestamp: timestamp (required)
+    //   - anonymous: bool (required)
+    //   - userId: string (optional)
+    //   - userName: string (optional)
+    //   - likes: int (required)
+    //   - comments: int (required)
+    //
+    // Collection: police_reports
+    // Document ID: {reportId}
+    // Fields:
+    //   - userId: string (optional)
+    //   - userName: string (optional)
+    //   - type: string (required)
+    //   - description: string (optional, max 1000 chars)
+    //   - location: map {lat: number, lng: number, address: string} (required)
+    //   - timestamp: timestamp (required)
+    //   - status: string (required, enum: ['received', 'dispatched', 'resolved'])
+    //   - isAnonymous: bool (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "shettyadithyas57@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && isValidEmail(data.email) &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             data.createdAt is timestamp &&
+             (!('emergencyContacts' in data) || data.emergencyContacts is list) &&
+             (!('language' in data) || data.language in ['en', 'hi']);
+    }
+
+    function isValidIncident(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 1000 &&
+             data.type in ['kidnapping', 'harassment', 'suspicious', 'safe'] &&
+             data.location is map && data.location.lat is number && data.location.lng is number &&
+             (!('address' in data.location) || (data.location.address is string && data.location.address.size() <= 200)) &&
+             data.timestamp is timestamp &&
+             data.anonymous is bool &&
+             data.likes is int &&
+             data.comments is int &&
+             (!('userName' in data) || (data.userName is string && data.userName.size() <= 100));
+    }
+
+    function isValidPoliceReport(data) {
+      return data.type is string && data.type.size() > 0 && data.type.size() <= 100 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+             data.location is map && data.location.lat is number && data.location.lng is number &&
+             (!('address' in data.location) || (data.location.address is string && data.location.address.size() <= 200)) &&
+             data.timestamp is timestamp &&
+             data.status in ['received', 'dispatched', 'resolved'] &&
+             data.isAnonymous is bool &&
+             (!('userName' in data) || (data.userName is string && data.userName.size() <= 100));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
+    match /incidents/{incidentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidIncident(request.resource.data) &&
+                      (request.resource.data.userId == request.auth.uid || request.resource.data.anonymous == true);
+      allow update: if isAuthenticated() && (
+                      (resource.data.userId == request.auth.uid && isValidIncident(request.resource.data)) ||
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'comments']))
+                    ) || isAdmin();
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /police_reports/{reportId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidPoliceReport(request.resource.data) &&
+                      (request.resource.data.userId == request.auth.uid || request.resource.data.isAnonymous == true) &&
+                      request.resource.data.status == 'received';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
