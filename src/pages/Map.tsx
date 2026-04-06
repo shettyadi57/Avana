@@ -62,10 +62,8 @@ const MapAutoCenter = ({ center }: { center: [number, number] }) => {
   return null;
 };
 
-const INITIAL_CENTER: [number, number] = [12.9716, 77.5946];
-const INITIAL_ZOOM = 13;
-
 export default function MapPage() {
+  const [map, setMap] = useState<L.Map | null>(null);
   const [origin, setOrigin] = useState<string>('');
   const [destination, setDestination] = useState<string>('');
   const [originCoords, setOriginCoords] = useState<[number, number] | null>(null);
@@ -212,10 +210,11 @@ export default function MapPage() {
   return (
     <div className="h-[calc(100vh-8rem)] relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-950">
       <MapContainer 
-        center={INITIAL_CENTER} 
-        zoom={INITIAL_ZOOM} 
+        center={currentLocation || [12.9716, 77.5946]} 
+        zoom={13} 
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
+        ref={setMap}
       >
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"

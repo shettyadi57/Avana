@@ -13,8 +13,7 @@ import {
   Menu,
   X,
   Bell,
-  Share2,
-  Bot
+  Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -39,8 +38,12 @@ const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (v: boolea
   const { user } = useAuth();
 
   const navItems = [
+    { name: 'Dashboard', path: '/', icon: Home },
+    { name: 'Live Map', path: '/map', icon: MapIcon },
     { name: 'SOS Emergency', path: '/sos', icon: ShieldAlert, color: 'text-red-500' },
     { name: 'Silent Complaint', path: '/police-complaint', icon: ShieldAlert, color: 'text-orange-500' },
+    { name: 'AI Chatbot', path: '/chat', icon: MessageSquare },
+    { name: 'Community', path: '/community', icon: Users },
     { name: 'Learning Hub', path: '/learning', icon: BookOpen },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
@@ -177,41 +180,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const BottomNav = () => {
-  const location = useLocation();
-  const { user } = useAuth();
-
-  const navItems = [
-    { name: 'Home', path: '/', icon: Home },
-    { name: 'Map', path: '/map', icon: MapIcon },
-    { name: 'AI Chat', path: '/chat', icon: Bot },
-    { name: 'Feed', path: '/community', icon: Users },
-  ];
-
-  if (!user) return null;
-
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 h-20 glass-dark border-t border-white/5 z-50 flex items-center justify-around px-4 lg:left-20">
-      {navItems.map((item) => {
-        const isActive = location.pathname === item.path;
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={cn(
-              "flex flex-col items-center gap-1 transition-all duration-300",
-              isActive ? "text-brand-orange" : "text-slate-400 hover:text-white"
-            )}
-          >
-            <item.icon className={cn("w-6 h-6", isActive && "animate-pulse")} />
-            <span className="text-[10px] font-black uppercase tracking-widest">{item.name}</span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
-};
-
 const FloatingButtons = () => {
   const location = useLocation();
   const isSOSPage = location.pathname === '/sos';
@@ -220,7 +188,7 @@ const FloatingButtons = () => {
   if (isSOSPage || isTrackPage) return null;
 
   return (
-    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 lg:left-[calc(50%+40px)]">
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4">
       <Link 
         to="/sos"
         className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(220,38,38,0.5)] border-4 border-red-500/30 active:scale-90 transition-all group"
@@ -254,7 +222,7 @@ export default function App() {
           <Header setIsOpen={setIsSidebarOpen} />
           
           <main className={cn(
-            "pt-20 pb-24 min-h-screen transition-all duration-300",
+            "pt-20 min-h-screen transition-all duration-300",
             "lg:pl-20"
           )}>
             <div className="max-w-7xl mx-auto p-6 sm:p-8 lg:p-10">
@@ -274,7 +242,6 @@ export default function App() {
             </div>
           </main>
 
-          <BottomNav />
           <FloatingButtons />
         </div>
       </Router>
