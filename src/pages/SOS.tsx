@@ -25,7 +25,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { db, auth } from '../firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot, arrayUnion } from 'firebase/firestore';
 
 interface Contact {
   name: string;
@@ -133,10 +133,20 @@ export default function SOSPage() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [status, isTripActive, trackingId]);
 
+  const dialContact = (phone: string) => {
+    // Standard tel: link for direct dialing
+    window.location.href = `tel:${phone}`;
+  };
+
   const triggerSOS = async () => {
     setStatus('active');
     setIsAlarmOn(true);
     if (audioRef.current) audioRef.current.play();
+
+    // Auto-dial first contact if available - DIRECTLY
+    if (contacts.length > 0) {
+      dialContact(contacts[0].phone);
+    }
 
     // Get current location
     navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -150,7 +160,7 @@ export default function SOSPage() {
           userName: profile?.displayName || 'Guest User',
           location: {
             ...loc,
-            address: 'Fetching address...'
+            address: 'Emergency SOS Triggered'
           },
           timestamp: serverTimestamp(),
           status: 'active',
@@ -169,7 +179,12 @@ export default function SOSPage() {
       const trackingRef = doc(db, 'live_tracking', trackingId);
       await updateDoc(trackingRef, {
         currentLocation: loc,
-        lastUpdated: serverTimestamp()
+        lastUpdated: serverTimestamp(),
+        path: arrayUnion({
+          lat: loc.lat,
+          lng: loc.lng,
+          timestamp: new Date().toISOString()
+        })
       });
     } catch (err) {
       console.error("Error updating tracking:", err);
@@ -186,6 +201,11 @@ export default function SOSPage() {
           userId: user?.uid || 'guest',
           userName: profile?.displayName || 'Guest User',
           currentLocation: loc,
+          path: [{
+            lat: loc.lat,
+            lng: loc.lng,
+            timestamp: new Date().toISOString()
+          }],
           status: 'active',
           startTime: serverTimestamp(),
           batteryLevel,
@@ -395,12 +415,20 @@ export default function SOSPage() {
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest">{contact.relation} • {contact.phone}</p>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => removeContact(i)}
-                      className="p-2 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => dialContact(contact.phone)}
+                        className="p-2 text-green-400 hover:bg-green-400/10 rounded-xl transition-all"
+                      >
+                        <Phone className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => removeContact(i)}
+                        className="p-2 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
                 {contacts.length === 0 && (
@@ -516,7 +544,15 @@ export default function SOSPage() {
                         </div>
                         <span className="text-white font-bold">{c.name}</span>
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-green-400 bg-green-500/10 px-3 py-1 rounded-full">Notified</span>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={() => dialContact(c.phone)}
+                          className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-all"
+                        >
+                          <Phone className="w-4 h-4" />
+                        </button>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-green-400 bg-green-500/10 px-3 py-1 rounded-full">Notified</span>
+                      </div>
                     </div>
                   )) : (
                     <p className="text-sm text-slate-500 italic">No emergency contacts set. Notifying nearby users and authorities.</p>
@@ -547,7 +583,10 @@ export default function SOSPage() {
                 <Camera className="w-8 h-8 text-brand-blue group-hover:scale-110 transition-transform" />
                 <span className="text-[10px] font-black uppercase tracking-widest">Camera</span>
               </button>
-              <button className="bg-white/5 border border-white/5 p-6 rounded-[2rem] flex flex-col items-center gap-3 hover:bg-white/10 transition-all group">
+              <button 
+                onClick={() => dialContact('112')}
+                className="bg-white/5 border border-white/5 p-6 rounded-[2rem] flex flex-col items-center gap-3 hover:bg-white/10 transition-all group"
+              >
                 <Phone className="w-8 h-8 text-green-400 group-hover:scale-110 transition-transform" />
                 <span className="text-[10px] font-black uppercase tracking-widest">Call 112</span>
               </button>

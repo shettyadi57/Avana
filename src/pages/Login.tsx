@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider, db } from '../firebase';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldAlert, Mail, Lock, ArrowRight } from 'lucide-react';
+import { ShieldAlert, Mail, Lock, ArrowRight, Chrome } from 'lucide-react';
 import { motion } from 'motion/react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const formatError = (err: any) => {
+    if (err.code === 'auth/network-request-failed') {
+      return "Network error: Please check your internet connection and ensure no ad-blockers are blocking Firebase (identitytoolkit.googleapis.com).";
+    }
+    return err.message;
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +28,34 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.message);
+      setError(formatError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Check if user exists in Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!userDoc.exists()) {
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          emergencyContacts: [],
+          language: 'en',
+          createdAt: new Date(),
+        });
+      }
+      navigate('/');
+    } catch (err: any) {
+      setError(formatError(err));
     } finally {
       setLoading(false);
     }
@@ -49,6 +84,23 @@ export default function LoginPage() {
             {error}
           </div>
         )}
+
+        <div className="space-y-4 relative z-10 mb-8">
+          <button
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 group"
+          >
+            <Chrome className="w-5 h-5 text-brand-orange" />
+            Continue with Google
+          </button>
+          
+          <div className="flex items-center gap-4 py-2">
+            <div className="h-px bg-white/10 flex-1" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">OR</span>
+            <div className="h-px bg-white/10 flex-1" />
+          </div>
+        </div>
 
         <form onSubmit={handleLogin} className="space-y-8 relative z-10">
           <div className="space-y-3">

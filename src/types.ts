@@ -17,7 +17,7 @@ export interface Incident {
   id: string;
   title: string;
   description: string;
-  type: 'kidnapping' | 'harassment' | 'suspicious' | 'safe';
+  type: 'alert' | 'warning' | 'info' | 'kidnapping' | 'harassment' | 'suspicious' | 'safe';
   location: {
     lat: number;
     lng: number;

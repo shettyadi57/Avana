@@ -6,7 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { MapPin, Battery, Wifi, ShieldCheck, Clock, Navigation } from 'lucide-react';
+import { MapPin, Battery, Wifi, ShieldCheck, Clock, Navigation, Share2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 // Custom SVG Icon for Marker
@@ -27,11 +27,16 @@ const MapAutoCenter = ({ center }: { center: [number, number] }) => {
   return null;
 };
 
+const INITIAL_CENTER: [number, number] = [12.9716, 77.5946];
+const INITIAL_ZOOM = 15;
+
 export default function TrackPage() {
   const { trackingId } = useParams<{ trackingId: string }>();
   const [trackingData, setTrackingData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [followMe, setFollowMe] = useState(true);
+  const [lastUpdatedSeconds, setLastUpdatedSeconds] = useState(0);
 
   useEffect(() => {
     if (!trackingId) return;
@@ -40,6 +45,7 @@ export default function TrackPage() {
       if (doc.exists()) {
         setTrackingData(doc.data());
         setLoading(false);
+        setLastUpdatedSeconds(0);
       } else {
         setError('Tracking session not found or has ended.');
         setLoading(false);
@@ -52,6 +58,13 @@ export default function TrackPage() {
 
     return () => unsub();
   }, [trackingId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLastUpdatedSeconds(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (
@@ -95,7 +108,9 @@ export default function TrackPage() {
                 <span className="text-slate-600">•</span>
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-slate-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Updated Just Now</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    Updated {lastUpdatedSeconds === 0 ? 'Just Now' : `${lastUpdatedSeconds}s ago`}
+                  </span>
                 </div>
               </div>
             </div>
@@ -124,8 +139,8 @@ export default function TrackPage() {
       {/* Map Content */}
       <div className="flex-1 relative z-10">
         <MapContainer 
-          center={center} 
-          zoom={15} 
+          center={INITIAL_CENTER} 
+          zoom={INITIAL_ZOOM} 
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
         >
@@ -133,7 +148,18 @@ export default function TrackPage() {
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           />
-          <MapAutoCenter center={center} />
+          {followMe && <MapAutoCenter center={center} />}
+          
+          {trackingData.path && trackingData.path.length > 1 && (
+            <Polyline 
+              positions={trackingData.path.map((p: any) => [p.lat, p.lng])}
+              color="#ff7e5f"
+              weight={4}
+              opacity={0.8}
+              dashArray="10, 10"
+            />
+          )}
+
           <Marker position={center} icon={customIcon}>
             <Popup>
               <div className="text-center p-2">
@@ -145,7 +171,19 @@ export default function TrackPage() {
         </MapContainer>
 
         {/* Floating Action Card */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-sm px-4">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-sm px-4 space-y-4">
+          <div className="flex justify-center">
+            <button 
+              onClick={() => setFollowMe(!followMe)}
+              className={cn(
+                "px-6 py-2 rounded-full font-black uppercase tracking-widest text-[10px] transition-all border shadow-lg",
+                followMe ? "bg-brand-orange text-white border-brand-orange" : "bg-slate-900 text-slate-400 border-white/10"
+              )}
+            >
+              {followMe ? 'Following User' : 'Follow User'}
+            </button>
+          </div>
+          
           <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -160,9 +198,25 @@ export default function TrackPage() {
                 <p className="text-sm font-bold text-white">{center[0].toFixed(6)}, {center[1].toFixed(6)}</p>
               </div>
             </div>
-            <button className="w-full bg-white/5 hover:bg-white/10 text-white py-4 rounded-2xl font-bold text-sm transition-all border border-white/5">
-              Open in Google Maps
-            </button>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Tracking link copied to clipboard!');
+                }}
+                className="flex-1 bg-white/5 hover:bg-white/10 text-white py-4 rounded-2xl font-bold text-sm transition-all border border-white/5 flex items-center justify-center gap-2"
+              >
+                <Share2 className="w-4 h-4" />
+                Copy Link
+              </button>
+              <button 
+                onClick={() => window.location.href = `https://www.google.com/maps/search/?api=1&query=${center[0]},${center[1]}`}
+                className="flex-1 bg-brand-orange text-white py-4 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-brand-orange/30 flex items-center justify-center gap-2"
+              >
+                <Navigation className="w-4 h-4" />
+                Open Maps
+              </button>
+            </div>
           </motion.div>
         </div>
       </div>

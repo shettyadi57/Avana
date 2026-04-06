@@ -138,6 +138,25 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /sos_alerts/{alertId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.status == 'active';
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /live_tracking/{trackingId} {
+      // Allow public read for tracking links
+      allow read: if true; 
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.status == 'active';
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
     // Default deny
     match /{path=**} {
       allow read, write: if false;
